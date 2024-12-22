@@ -14,18 +14,20 @@ test.describe('SingleFile Plugin', () => {
     const filename = 'qa.tech.html'
 
     // Save the page
-    const html = await pageToSingleFile(page, {
+    const pageData = await pageToSingleFile(page, {
       removeScripts: true,
       compressHTML: false,
       removeHidden: false,
     })
 
-    const savedFilePath = await saveFile(filename, html)
+    console.log('stats', pageData.stats)
+
+    const savedFilePath = await saveFile(filename, pageData.content)
 
     // Verify the output
-    expect(html).toBeTruthy()
-    expect(html).toContain('<html')
-    expect(html).toContain('</html>')
+    expect(pageData.content).toBeTruthy()
+    expect(pageData.content).toContain('<html')
+    expect(pageData.content).toContain('</html>')
 
     // Verify the file was saved
     await expect(fs.access(savedFilePath)).resolves.not.toThrow()

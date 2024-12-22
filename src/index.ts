@@ -1,35 +1,33 @@
 import { Page } from 'playwright-core'
-import { getPageData } from './lib/cdp-client.js'
+import { getPageData, type PageData } from './lib/cdp-client.js'
 import { removeEmptyLines, removeScripts } from './lib/remover.js'
 
 interface SavePageAsHtmlOptions extends SavePageOptions {}
 
 // Implementation of the SingleFile plugin
 class SingleFile {
-  async run(page: Page, options: SavePageAsHtmlOptions = {}): Promise<string> {
+  async run(
+    page: Page,
+    options: SavePageAsHtmlOptions = {},
+  ): Promise<PageData> {
     const cdpOptions = createCdpOptions(options)
+    ;(cdpOptions as any).displayStats = true
     const pageData = await getPageData(page, cdpOptions)
-    let content =
-      typeof pageData.content === 'string'
-        ? pageData.content
-        : new TextDecoder().decode(new Uint8Array(pageData.content))
 
-    if (cdpOptions.removeScripts) {
-      content = removeScripts(content)
-    }
+    let content = pageData.content
 
     if (cdpOptions.removeEmptyLines) {
       content = removeEmptyLines(content)
     }
 
-    return content
+    return { ...pageData, content }
   }
 }
 
 export async function pageToSingleFile(
   page: Page,
   options: SavePageAsHtmlOptions = {},
-): Promise<string> {
+): Promise<PageData> {
   const singleFile = new SingleFile()
   return singleFile.run(page, options)
 }

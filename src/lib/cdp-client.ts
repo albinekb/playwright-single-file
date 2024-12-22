@@ -38,8 +38,9 @@ const NETWORK_STATES = [
   'load',
   'DOMContentLoaded',
 ]
-const SINGLE_FILE_WORLD_NAME = 'singlefile'
-const SET_PAGE_DATA_FUNCTION_NAME = 'setPageData'
+const SINGLE_FILE_WORLD_NAME = 'singlefile' as const
+const SET_PAGE_DATA_FUNCTION_NAME = 'setPageData' as const
+const SEND_MESSAGE_FUNCTION_NAME = 'sendMessage' as const
 
 interface CDPContext {
   id: number
@@ -59,18 +60,49 @@ declare global {
     singlefile: {
       getPageData: (options: any) => Promise<any>
     }
+    [SET_PAGE_DATA_FUNCTION_NAME]: (data: string) => void
+    [SEND_MESSAGE_FUNCTION_NAME]: (data: string) => void
   }
 }
 
-interface PageData {
-  content: string | number[]
+type PageDataStatsContent = {
+  'HTML bytes'?: number
+  'hidden elements'?: number
+  scripts?: number
+  objects?: number
+  'audio sources'?: number
+  'video sources'?: number
+  frames?: number
+  'CSS rules'?: number
+  canvas?: number
+  stylesheets?: number
+  resources?: number
+  medias?: number
+} & Record<string, number>
+
+type PageDataStats = {
+  processed: PageDataStatsContent
+  discarded: PageDataStatsContent
+}
+
+interface PageDataBase {
   title?: string
   doctype?: string
   url?: string
+  stats?: PageDataStats
+}
+
+interface PageDataWIP extends PageDataBase {
+  content: string | number[] | Uint8Array
+}
+
+export interface PageData extends PageDataBase {
+  content: string
 }
 
 export interface GetPageDataOptions extends Required<SavePageOptions> {}
 
+type CleanupFn = () => Promise<any> | any
 class CDPManager {
   cdpClient: CDPSession
   private page: Page
@@ -133,6 +165,11 @@ class CDPManager {
       'Runtime.executionContextDestroyed',
       this.onExecutionContextDestroyed,
     )
+
+    await this.cdpClient.send('Page.setLifecycleEventsEnabled', {
+      enabled: false,
+    })
+    await this.cdpClient.send('Runtime.disable')
   }
 
   private async onExecutionContextDestroyed(
@@ -149,7 +186,7 @@ class CDPManager {
     this.contextIds.add(id)
   }
 
-  private cleanups: (() => Promise<void>)[] = []
+  private cleanups: CleanupFn[] = []
   async addScriptToEvaluateOnNewDocument(
     params: Protocol.Page.addScriptToEvaluateOnNewDocumentParameters,
   ) {
@@ -157,11 +194,11 @@ class CDPManager {
       'Page.addScriptToEvaluateOnNewDocument',
       params,
     )
-    this.cleanups.push(async () => {
-      await this.cdpClient.send('Page.removeScriptToEvaluateOnNewDocument', {
+    this.addCleanup(() =>
+      this.cdpClient.send('Page.removeScriptToEvaluateOnNewDocument', {
         identifier,
-      })
-    })
+      }),
+    )
   }
 
   private async testExecutionContext(contextId: number) {
@@ -211,21 +248,26 @@ class CDPManager {
       executionContextId,
     })
 
-    this.cleanups.push(async () => {
-      await this.cdpClient.send('Runtime.removeBinding', {
+    this.addCleanup(() =>
+      this.cdpClient.send('Runtime.removeBinding', {
         name,
-      })
-    })
+      }),
+    )
   }
 
-  addCleanup(cleanup: () => Promise<void>) {
-    this.cleanups.push(cleanup)
+  addCleanup(cleanupFn: CleanupFn) {
+    this.cleanups.push(cleanupFn)
+  }
+
+  withCleanup<T>(fn: () => T, cleanupFn: CleanupFn) {
+    this.addCleanup(cleanupFn)
+    return fn()
   }
 
   async cleanup() {
-    for (const cleanup of this.cleanups) {
+    for (const cleanupFn of this.cleanups) {
       try {
-        await cleanup()
+        await cleanupFn()
       } catch (e) {
         console.error('Error cleaning up', e)
       }
@@ -257,34 +299,45 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
 
     // Add binding for page data
     await manager.addBinding(SET_PAGE_DATA_FUNCTION_NAME, contextId)
+    await manager.addBinding(SEND_MESSAGE_FUNCTION_NAME, contextId)
 
     // Execute SingleFile in the isolated world
-    let pageDataResponse: PageData | string = ''
+    let pageDataResponse: PageDataWIP | string = ''
     function onBindingCalled(params: any) {
+      if (params.name === SEND_MESSAGE_FUNCTION_NAME) {
+        const { payload } = params
+        const parsed = JSON.parse(payload)
+        // console.log('SEND_MESSAGE_FUNCTION_NAME', parsed)
+      }
       if (params.name === SET_PAGE_DATA_FUNCTION_NAME) {
         const { payload } = params
         if (payload.length) {
           pageDataResponse += payload
         } else {
-          const result = JSON.parse(pageDataResponse as string)
+          const result = JSON.parse(pageDataResponse as string) as PageDataWIP
           if (result.content instanceof Array) {
             result.content = new Uint8Array(result.content)
           }
-          pageDataResponse = result as PageData
+          pageDataResponse = result
         }
       }
     }
-    cdpClient.on('Runtime.bindingCalled', onBindingCalled)
-    manager.addCleanup(async () => {
-      cdpClient.off('Runtime.bindingCalled', onBindingCalled)
-    })
+
+    manager.withCleanup(
+      () => cdpClient.on('Runtime.bindingCalled', onBindingCalled),
+      () => cdpClient.off('Runtime.bindingCalled', onBindingCalled),
+    )
 
     // Execute the page data script
     const { result } = (await cdpClient.send('Runtime.evaluate', {
       expression: `(${getPageDataScriptSource.toString()})(${JSON.stringify(
         options,
-      )}, "${SET_PAGE_DATA_FUNCTION_NAME}")`,
+      )},${JSON.stringify([
+        SET_PAGE_DATA_FUNCTION_NAME,
+        SEND_MESSAGE_FUNCTION_NAME,
+      ])})`,
       awaitPromise: true,
+      returnByValue: true,
       contextId,
     })) as CDPEvaluateResult
 
@@ -294,6 +347,14 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
 
     assert(typeof pageDataResponse === 'object', 'Page data is not an object')
 
+    pageDataResponse = pageDataResponse as PageDataWIP
+
+    let content =
+      typeof pageDataResponse.content === 'string'
+        ? pageDataResponse.content
+        : new TextDecoder().decode(new Uint8Array(pageDataResponse.content))
+
+    pageDataResponse.content = content
     return pageDataResponse as PageData
   } finally {
     try {
@@ -322,11 +383,28 @@ async function getIsolatedContextId(
   return executionContextId
 }
 
+type FunctionNames = [
+  typeof SET_PAGE_DATA_FUNCTION_NAME,
+  typeof SEND_MESSAGE_FUNCTION_NAME,
+]
+
 function getPageDataScriptSource(
   options: any,
-  setPageDataFunctionName: string,
+  [SET_PAGE_DATA_FUNCTION_NAME, SEND_MESSAGE_FUNCTION_NAME]: FunctionNames,
 ) {
-  const MAX_CONTENT_SIZE = 32 * 1024 * 1024
+  const MAX_CONTENT_SIZE = 32 * 1024 * 1024 // 32MB
+  options.onprogress = async (event: any) => {
+    window[SEND_MESSAGE_FUNCTION_NAME](
+      JSON.stringify({
+        type: event.type,
+        keys: Object.keys(event),
+        details: Object.keys(event.detail),
+        step: event.detail.step,
+        progress: event.progress,
+      }),
+    )
+  }
+
   return window.singlefile.getPageData(options).then((data: any) => {
     if (data.content instanceof Uint8Array) {
       data.content = Array.from(data.content)
@@ -334,13 +412,12 @@ function getPageDataScriptSource(
     data = JSON.stringify(data)
     let indexData = 0
     do {
-      // @ts-ignore
-      globalThis[setPageDataFunctionName](
+      window[SET_PAGE_DATA_FUNCTION_NAME](
         data.slice(indexData, indexData + MAX_CONTENT_SIZE),
       )
       indexData += MAX_CONTENT_SIZE
     } while (indexData < data.length)
-    // @ts-ignore
-    globalThis[setPageDataFunctionName]('')
+
+    window[SET_PAGE_DATA_FUNCTION_NAME]('')
   })
 }

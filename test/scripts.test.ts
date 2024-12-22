@@ -12,15 +12,19 @@ test.describe('SingleFile scripts', () => {
 
     const withScripts = await pageToSingleFile(page, {
       removeScripts: false,
+      blockScripts: false,
     })
 
     const withScriptsPath = await saveFile(
       'qa.tech_withScripts.html',
-      withScripts,
+      withScripts.content,
     )
 
-    expect(withScripts).toContain('<script')
-    expect(withScripts).toContain('</script>')
+    expect(withScripts.content).toContain('<script')
+    expect(withScripts.content).toContain('</script>')
+    expect(withScripts.content).toContain('application/javascript')
+    expect(withScripts.stats!.discarded.scripts).toEqual(0)
+    expect(withScripts.stats!.processed.scripts).toBeGreaterThan(0)
 
     const withoutScripts = await pageToSingleFile(page, {
       removeScripts: true,
@@ -29,11 +33,22 @@ test.describe('SingleFile scripts', () => {
     })
     const withoutScriptsPath = await saveFile(
       'qa.tech_withoutScripts.html',
-      withoutScripts,
+      withoutScripts.content,
     )
 
-    expect(withoutScripts).not.toContain('<script')
-    expect(withoutScripts).not.toContain('</script>')
+    expect(withoutScripts.stats!.discarded.scripts).toEqual(
+      withoutScripts.stats!.processed.scripts,
+    )
+
+    console.log('withoutScripts.stats', withoutScripts.stats)
+    console.log('withScripts.stats', withScripts.stats)
+
+    const scriptTagsCount = withoutScripts.content.match(/<script/g)?.length
+    expect(scriptTagsCount).toEqual(1)
+    const scriptTagsCloseCount =
+      withoutScripts.content.match(/<\/script>/g)?.length
+    expect(scriptTagsCloseCount).toEqual(1)
+    expect(withoutScripts.content).not.toContain('application/javascript')
 
     // expect(withoutScripts).not.toContain('\n\n\n')
 
