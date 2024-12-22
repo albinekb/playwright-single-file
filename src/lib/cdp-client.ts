@@ -24,10 +24,10 @@
 /* global setTimeout, clearTimeout */
 
 import { Page, type CDPSession } from 'playwright-core'
-import { getScriptSource, getHookScriptSource } from './single-file-script.js'
-import type { SavePageOptions } from '../index.js'
 import type { Protocol } from 'playwright-core/types/protocol'
-import console from 'console'
+import type { SavePageOptions } from '../index.js'
+import { getHookScriptSource, getScriptSource } from './single-file-script.js'
+import assert from 'assert'
 
 const LOAD_TIMEOUT_ERROR = 'ERR_LOAD_TIMEOUT'
 const CAPTURE_TIMEOUT_ERROR = 'ERR_CAPTURE_TIMEOUT'
@@ -92,7 +92,23 @@ class CDPManager {
     return manager
   }
 
-  async setupHandlers() {
+  async catchContextId<T>(
+    innerFn: () => Promise<T>,
+  ): Promise<{ result: T; contextId: number }> {
+    try {
+      await this.setupHandlers()
+      const result = await innerFn()
+      const contextId = await this.getContextId()
+      return { result, contextId }
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      await this.removeHandlers()
+    }
+  }
+
+  private async setupHandlers() {
     await this.cdpClient.send('Runtime.enable')
     await this.cdpClient.send('Page.setLifecycleEventsEnabled', {
       enabled: true,
@@ -108,7 +124,7 @@ class CDPManager {
     )
   }
 
-  async removeHandlers() {
+  private async removeHandlers() {
     this.cdpClient.off(
       'Runtime.executionContextCreated',
       this.onExecutionContextCreated,
@@ -148,7 +164,7 @@ class CDPManager {
     })
   }
 
-  async testExecutionContext(contextId: number) {
+  private async testExecutionContext(contextId: number) {
     try {
       const { result } = await this.cdpClient.send('Runtime.evaluate', {
         expression: 'singlefile !== undefined',
@@ -162,7 +178,7 @@ class CDPManager {
   }
 
   private _contextId?: number
-  async getContextId() {
+  private async getContextId() {
     if (this._contextId) {
       return this._contextId
     }
@@ -207,7 +223,15 @@ class CDPManager {
   }
 
   async cleanup() {
-    await Promise.all(this.cleanups.map((cleanup) => cleanup()))
+    for (const cleanup of this.cleanups) {
+      try {
+        await cleanup()
+      } catch (e) {
+        console.error('Error cleaning up', e)
+      }
+    }
+
+    this.cleanups = []
   }
 }
 
@@ -222,32 +246,31 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
       runImmediately: true,
     })
 
-    await manager.setupHandlers()
-    // Add SingleFile script in isolated world
-    await manager.addScriptToEvaluateOnNewDocument({
-      source: await getScriptSource(options),
-      runImmediately: true,
-      worldName: SINGLE_FILE_WORLD_NAME,
+    const { contextId } = await manager.catchContextId(async () => {
+      // Add SingleFile script in isolated world
+      await manager.addScriptToEvaluateOnNewDocument({
+        source: await getScriptSource(options),
+        runImmediately: true,
+        worldName: SINGLE_FILE_WORLD_NAME,
+      })
     })
-
-    const contextId = await manager.getContextId()
 
     // Add binding for page data
     await manager.addBinding(SET_PAGE_DATA_FUNCTION_NAME, contextId)
 
     // Execute SingleFile in the isolated world
-    let pageDataResponse = ''
+    let pageDataResponse: PageData | string = ''
     function onBindingCalled(params: any) {
       if (params.name === SET_PAGE_DATA_FUNCTION_NAME) {
         const { payload } = params
         if (payload.length) {
           pageDataResponse += payload
         } else {
-          const result = JSON.parse(pageDataResponse)
+          const result = JSON.parse(pageDataResponse as string)
           if (result.content instanceof Array) {
             result.content = new Uint8Array(result.content)
           }
-          pageDataResponse = result
+          pageDataResponse = result as PageData
         }
       }
     }
@@ -269,7 +292,9 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
       throw new Error(result.description || 'Unknown error')
     }
 
-    return pageDataResponse as unknown as PageData
+    assert(typeof pageDataResponse === 'object', 'Page data is not an object')
+
+    return pageDataResponse as PageData
   } finally {
     try {
       await manager.cleanup()

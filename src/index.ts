@@ -5,7 +5,7 @@ import { removeEmptyLines, removeScripts } from './lib/remover.js'
 interface SavePageAsHtmlOptions extends SavePageOptions {}
 
 // Implementation of the SingleFile plugin
-export class SingleFile {
+class SingleFile {
   async run(page: Page, options: SavePageAsHtmlOptions = {}): Promise<string> {
     const cdpOptions = createCdpOptions(options)
     const pageData = await getPageData(page, cdpOptions)
