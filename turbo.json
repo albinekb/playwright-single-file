@@ -1,0 +1,31 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "bundle:singlefile": {
+      "outputs": ["src/lib/vendor/**"],
+      "inputs": ["scripts/**"],
+      "outputLogs": "new-only"
+    },
+    "build": {
+      "dependsOn": ["bundle:singlefile"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "!src/lib/vendor/**",
+        "!test/**",
+        "!scripts/**"
+      ],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "test:ui": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

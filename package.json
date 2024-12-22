@@ -1,0 +1,47 @@
+{
+  "name": "playwright-singlefile",
+  "version": "1.0.0",
+  "description": "SingleFile Playwright",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "playwright test",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "bundle:singlefile": "tsx scripts/bundle.ts"
+  },
+  "keywords": [
+    "playwright",
+    "singlefile",
+    "browser",
+    "automation"
+  ],
+  "author": "Albin Ekblom",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2",
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "esbuild": "^0.24.2",
+    "execa": "^9.5.2",
+    "img-diff-js": "^0.5.4",
+    "pixelmatch": "^6.0.0",
+    "playwright": "^1.49.1",
+    "pngjs": "^7.0.0",
+    "single-file-core": "^1.5.44",
+    "term-img": "^7.0.0",
+    "tsx": "^4.19.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "playwright-core": "^1.48.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "packageManager": "pnpm@9.15.1+sha256.9e534e70afef06374f6126b44bda5760947135ce16a30aef1010e965fb7e3e3e"
+}
