@@ -10,7 +10,7 @@ pnpm add playwright-single-file
 
 ## Requirements
 
-- Node.js 16 or higher
+- Node.js 20 or higher
 - Playwright ^1.48.0 (peer dependency)
 
 ## Usage
