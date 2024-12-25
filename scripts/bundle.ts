@@ -108,12 +108,6 @@ async function main() {
   await fs.writeFile(path.join(outDir, 'single-file-bundle.js'), script)
   await Promise.all(SCRIPTS.map((script) => fs.unlink(script)))
   await fs.unlink(path.join(outDir, 'single-file-hooks-frames.js'))
-
-  const packageJson = JSON.parse(await fs.readFile('./package.json', 'utf8'))
-  await fs.writeFile(
-    path.join(outDir, 'version.js'),
-    'export const version = ' + JSON.stringify(packageJson.version) + ';',
-  )
 }
 
 main().catch(console.error)
