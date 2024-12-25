@@ -21,32 +21,15 @@
  *   Source.
  */
 
-/* global setTimeout, clearTimeout */
-
 import { Page, type CDPSession } from 'playwright-core'
 import type { Protocol } from 'playwright-core/types/protocol'
 import type { SavePageOptions } from '../index.js'
 import { getHookScriptSource, getScriptSource } from './single-file-script.js'
 import assert from 'assert'
 
-const LOAD_TIMEOUT_ERROR = 'ERR_LOAD_TIMEOUT'
-const CAPTURE_TIMEOUT_ERROR = 'ERR_CAPTURE_TIMEOUT'
-const NETWORK_STATES = [
-  'InteractiveTime',
-  'networkIdle',
-  'networkAlmostIdle',
-  'load',
-  'DOMContentLoaded',
-]
 const SINGLE_FILE_WORLD_NAME = 'singlefile' as const
 const SET_PAGE_DATA_FUNCTION_NAME = 'setPageData' as const
 const SEND_MESSAGE_FUNCTION_NAME = 'sendMessage' as const
-
-interface CDPContext {
-  id: number
-  name: string
-  origin: string
-}
 
 interface CDPEvaluateResult {
   result: {
@@ -58,7 +41,7 @@ interface CDPEvaluateResult {
 declare global {
   interface Window {
     singlefile: {
-      getPageData: (options: any) => Promise<any>
+      getPageData: (options: SavePageOptions) => Promise<PageData>
     }
     [SET_PAGE_DATA_FUNCTION_NAME]: (data: string) => void
     [SEND_MESSAGE_FUNCTION_NAME]: (data: string) => void
@@ -100,12 +83,12 @@ export interface PageData extends PageDataBase {
   content: string
 }
 
-export interface GetPageDataOptions extends Required<SavePageOptions> {}
+export type GetPageDataOptions = Required<SavePageOptions>
 
-type CleanupFn = () => Promise<any> | any
+type CleanupFn = () => Promise<unknown> | unknown
 class CDPManager {
   cdpClient: CDPSession
-  private page: Page
+  private page: Page | null
   private constructor(page: Page, cdpClient: CDPSession) {
     this.page = page
     this.cdpClient = cdpClient
@@ -116,7 +99,7 @@ class CDPManager {
 
   contextIds = new Set<number>()
 
-  static async create(page: Page, options: GetPageDataOptions) {
+  static async create(page: Page) {
     const cdpClient = await page.context().newCDPSession(page)
 
     const manager = new CDPManager(page, cdpClient)
@@ -274,11 +257,12 @@ class CDPManager {
     }
 
     this.cleanups = []
+    this.page = null
   }
 }
 
 export async function getPageData(page: Page, options: GetPageDataOptions) {
-  const manager = await CDPManager.create(page, options)
+  const manager = await CDPManager.create(page)
   const cdpClient = manager.cdpClient
 
   try {
@@ -303,11 +287,9 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
 
     // Execute SingleFile in the isolated world
     let pageDataResponse: PageDataWIP | string = ''
-    function onBindingCalled(params: any) {
+    function onBindingCalled(params: { name: string; payload: string }) {
       if (params.name === SEND_MESSAGE_FUNCTION_NAME) {
-        const { payload } = params
-        const parsed = JSON.parse(payload)
-        // console.log('SEND_MESSAGE_FUNCTION_NAME', parsed)
+        // TODO: Implement
       }
       if (params.name === SET_PAGE_DATA_FUNCTION_NAME) {
         const { payload } = params
@@ -349,7 +331,7 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
 
     pageDataResponse = pageDataResponse as PageDataWIP
 
-    let content =
+    const content =
       typeof pageDataResponse.content === 'string'
         ? pageDataResponse.content
         : new TextDecoder().decode(new Uint8Array(pageDataResponse.content))
@@ -368,32 +350,25 @@ export async function getPageData(page: Page, options: GetPageDataOptions) {
   }
 }
 
-async function getIsolatedContextId(
-  cdpClient: CDPSession,
-  frameId: string,
-  worldName: string,
-): Promise<number> {
-  const { executionContextId } = await cdpClient.send(
-    'Page.createIsolatedWorld',
-    {
-      frameId,
-      worldName,
-    },
-  )
-  return executionContextId
-}
-
 type FunctionNames = [
   typeof SET_PAGE_DATA_FUNCTION_NAME,
   typeof SEND_MESSAGE_FUNCTION_NAME,
 ]
 
+type SingleFileProgressEvent = {
+  type: string
+  detail: Record<string, unknown>
+  progress: number
+}
+
 function getPageDataScriptSource(
-  options: any,
+  options: GetPageDataOptions & {
+    onprogress: (event: SingleFileProgressEvent) => void
+  },
   [SET_PAGE_DATA_FUNCTION_NAME, SEND_MESSAGE_FUNCTION_NAME]: FunctionNames,
 ) {
   const MAX_CONTENT_SIZE = 32 * 1024 * 1024 // 32MB
-  options.onprogress = async (event: any) => {
+  options.onprogress = async (event: SingleFileProgressEvent) => {
     window[SEND_MESSAGE_FUNCTION_NAME](
       JSON.stringify({
         type: event.type,

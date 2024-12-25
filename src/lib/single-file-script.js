@@ -21,7 +21,7 @@
  *   Source.
  */
 
-/* global singlefile, XMLHttpRequest */
+/* global singlefile */
 
 import { script, hookScript, zipScript } from './vendor/single-file-bundle.js'
 

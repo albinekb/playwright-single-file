@@ -17,7 +17,8 @@
     "bundle:singlefile": "tsx scripts/bundle.ts",
     "postversion": "turbo build",
     "clean": "rm -rf dist",
-    "prebuild": "pnpm clean"
+    "prebuild": "pnpm clean",
+    "lint": "eslint"
   },
   "keywords": [
     "playwright",
@@ -29,12 +30,16 @@
   "author": "Albin Ekblom",
   "license": "AGPL-3.0-or-later",
   "devDependencies": {
+    "@eslint/compat": "^1.2.4",
+    "@eslint/js": "^9.17.0",
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.2",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
     "esbuild": "^0.24.2",
+    "eslint": "^9.17.0",
     "execa": "^9.5.2",
+    "globals": "^15.14.0",
     "img-diff-js": "^0.5.4",
     "pixelmatch": "^6.0.0",
     "playwright": "^1.49.1",
@@ -43,7 +48,8 @@
     "term-img": "^7.0.0",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
   },
   "peerDependencies": {
     "playwright-core": "^1.48.0"

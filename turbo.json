@@ -22,6 +22,9 @@
       "dependsOn": ["build"],
       "cache": false
     },
+    "lint": {
+      "cache": false
+    },
     "test:ui": {
       "dependsOn": ["build"],
       "cache": false,

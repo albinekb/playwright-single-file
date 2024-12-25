@@ -79,6 +79,9 @@ jobs:
       - name: Build
         run: pnpm turbo build
 
+      - name: Lint
+        run: pnpm turbo lint  
+
       - name: Test
         run: pnpm turbo test
 

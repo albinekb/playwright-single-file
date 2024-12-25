@@ -1,6 +1,6 @@
 import { Page } from 'playwright-core'
 import { getPageData, type PageData } from './lib/cdp-client.js'
-import { removeEmptyLines, removeScripts } from './lib/remover.js'
+import { removeEmptyLines } from './lib/remover.js'
 
 interface SavePageAsHtmlOptions extends SavePageOptions {}
 
