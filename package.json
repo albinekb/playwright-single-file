@@ -1,6 +1,6 @@
 {
   "name": "playwright-single-file",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "SingleFile for Playwright",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
