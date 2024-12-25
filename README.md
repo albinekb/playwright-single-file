@@ -5,7 +5,7 @@ A Node.js library that integrates SingleFile functionality with Playwright for s
 ## Installation
 
 ```bashc
-pnpm add playwright-singlefile
+pnpm add playwright-single-file
 ```
 
 ## Requirements
@@ -17,7 +17,7 @@ pnpm add playwright-singlefile
 
 ```typescript
 import { chromium } from 'playwright'
-import { pageToSingleFile } from 'playwright-singlefile'
+import { pageToSingleFile } from 'playwright-single-file'
 
 // Basic usage
 async function savePage(page) {
@@ -83,3 +83,7 @@ pnpm test:ui
 # Run tests in debug mode
 pnpm test:debug
 ```
+
+## License
+
+SingleFile and SingleFile CLI are licensed under AGPL. Code derived from third-party projects is licensed under MIT. Contact gildas.lormeau &lt;at&gt; gmail.com if you are interested in licensing the SingleFile code for a commercial service or product.

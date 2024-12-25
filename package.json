@@ -1,7 +1,7 @@
 {
-  "name": "playwright-singlefile",
+  "name": "playwright-single-file",
   "version": "1.0.0",
-  "description": "SingleFile Playwright",
+  "description": "SingleFile for Playwright",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -15,11 +15,12 @@
   "keywords": [
     "playwright",
     "singlefile",
+    "single-file",
     "browser",
     "automation"
   ],
   "author": "Albin Ekblom",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.2",
