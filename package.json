@@ -15,7 +15,9 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "bundle:singlefile": "tsx scripts/bundle.ts",
-    "postversion": "turbo build"
+    "postversion": "turbo build",
+    "clean": "rm -rf dist",
+    "prebuild": "pnpm clean"
   },
   "keywords": [
     "playwright",
@@ -47,7 +49,8 @@
     "playwright-core": "^1.48.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/lib/vendor/*.d.ts"
   ],
   "packageManager": "pnpm@9.15.1+sha256.9e534e70afef06374f6126b44bda5760947135ce16a30aef1010e965fb7e3e3e"
 }

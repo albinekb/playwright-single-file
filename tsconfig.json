@@ -12,7 +12,7 @@
     "module": "NodeNext",
     "outDir": "./dist",
     "rootDir": "./src",
-    "sourceMap": true,
+    "sourceMap": false,
     "declaration": true
   },
   "exclude": ["node_modules", "dist", "test"],
