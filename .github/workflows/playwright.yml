@@ -68,10 +68,10 @@ jobs:
         run: pnpm exec playwright install --with-deps
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo build
 
       - name: Test
-        run: pnpm test
+        run: pnpm turbo test
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
