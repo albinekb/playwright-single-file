@@ -59,7 +59,9 @@ jobs:
 
       - name: Get installed Playwright version
         id: playwright-version
-        run: echo "version=$(cat package.json | jq -r '.devDependencies.playwright')" >> $GITHUB_OUTPUT
+        run: |
+          version=$(cat package.json | jq -r '.peerDependencies["playwright-core"]')
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Set up playwright cache
         uses: actions/cache@v4
