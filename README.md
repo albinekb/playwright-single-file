@@ -1,6 +1,6 @@
 # Playwright SingleFile
 
-A Node.js library that integrates SingleFile functionality with Playwright for saving complete web pages as single HTML files. This package allows you to capture full-page snapshots including CSS, images, and other resources embedded directly in the HTML file.
+A Node.js library that integrates [SingleFile](https://github.com/gildas-lormeau/SingleFile) functionality with Playwright for saving complete web pages as single HTML files. This package allows you to capture full-page snapshots including CSS, images, and other resources embedded directly in the HTML file.
 
 ## Installation
 
@@ -83,6 +83,12 @@ pnpm test:ui
 # Run tests in debug mode
 pnpm test:debug
 ```
+
+## Made possible by
+
+- [SingleFile](https://github.com/gildas-lormeau/SingleFile)
+- [SingleFile CLI](https://github.com/gildas-lormeau/single-file-cli)
+- [single-file-core](https://github.com/gildas-lormeau/single-file-core)
 
 ## License
 
