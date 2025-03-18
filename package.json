@@ -36,7 +36,7 @@
     "@types/node": "^22.10.2",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.0",
     "eslint": "^9.17.0",
     "execa": "^9.5.2",
     "globals": "^15.14.0",
